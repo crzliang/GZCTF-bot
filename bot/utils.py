@@ -72,7 +72,7 @@ def extract_challenge_name_from_values(values_str: str) -> str:
 
 
 def _parse_blood_notification_values(decoded_values: Any) -> Optional[tuple[str, str]]:
-    """解析血腥通知的值
+    """解析前三通知的值
     
     Args:
         decoded_values: 解码后的值
@@ -101,18 +101,18 @@ def _parse_blood_notification_values(decoded_values: Any) -> Optional[tuple[str,
 
 
 def _get_blood_type_info(notice_type: str) -> Optional[tuple[str, str]]:
-    """获取血腥通知类型信息
+    """获取前三通知类型信息
     
     Args:
         notice_type: 通知类型字符串
         
     Returns:
-        元组(血腥类型, 表情)，未识别返回None
+        元组(前三类型, 表情)，未识别返回None
     """
     blood_mapping = {
         "一血": ("一血", "🥇"),
         "二血": ("二血", "🥈"),
-        "三血": ("三血", "�")
+        "三血": ("三血", "🥉")
     }
     
     for blood_key, (blood_type, emoji) in blood_mapping.items():
@@ -123,7 +123,7 @@ def _get_blood_type_info(notice_type: str) -> Optional[tuple[str, str]]:
 
 
 def format_blood_notification(notice_type: str, values_str: str) -> str:
-    """格式化血腥通知的显示内容
+    """格式化前三通知的显示内容
     
     Args:
         notice_type: 通知类型

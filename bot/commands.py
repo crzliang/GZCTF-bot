@@ -110,7 +110,7 @@ async def handle_help(bot: Bot, event: Event):
 • /open - 开启自动播报(一血、二血、三血、上新题、题目加提示、赛事公告)
 • /close - 关闭自动播报(一血、二血、三血、上新题、题目加提示、赛事公告)
 
-注意：自动播报默认关闭，请使用 /open 开启，/close 关闭。
+注意：自动播报默认开启，请使用 /close 关闭。
     """.strip()
     
     try:

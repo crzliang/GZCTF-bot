@@ -47,7 +47,7 @@ class NotificationConfig:
 # 状态
 broadcasted_notices: Set[int] = set()
 last_checked_time: Optional[datetime] = None  # UTC
-AUTO_BROADCAST_ENABLED: bool = False
+AUTO_BROADCAST_ENABLED: bool = True
 
 
 def is_auto_broadcast_enabled() -> bool:
@@ -146,7 +146,7 @@ async def _fmt_announce(values: str, publish_time: datetime) -> str:
 async def _fmt_blood_wrapper(notice_type: str, values: str, publish_time: datetime) -> str:
     try:
         content = format_blood_notification(notice_type, values)
-        title = "🏆 血腥通知"
+        title = "🏆 前三播报"
         if NotificationTypes.FIRST_BLOOD.value in notice_type:
             title = "🥇 一血通知"
         elif NotificationTypes.SECOND_BLOOD.value in notice_type:
@@ -157,7 +157,7 @@ async def _fmt_blood_wrapper(notice_type: str, values: str, publish_time: dateti
         return f"{_border(title)}\n{body}\n时间: {_fmt_bj(publish_time)}\n======================="
     except Exception as e:
         logger.exception("format blood failed: %s", e)
-        return _fallback("🏆 血腥通知", notice_type, publish_time)
+        return _fallback("🏆 前三播报", notice_type, publish_time)
 
 
 async def _formatter_for(notice_type: str) -> Optional[Callable[[str, datetime], Optional[str]]]:
@@ -170,7 +170,7 @@ async def _formatter_for(notice_type: str) -> Optional[Callable[[str, datetime],
     for key, func in mapping.items():
         if key in notice_type:
             return func
-    # 血类
+    # 名次
     blood_keys = [
         NotificationTypes.FIRST_BLOOD.value,
         NotificationTypes.SECOND_BLOOD.value,
@@ -223,7 +223,7 @@ async def check_and_broadcast_notices() -> None:
 
     # 暂时禁用实际查询，避免回放
     rows: List[Dict] = []
-    # rows = await get_recent_notices(int(TARGET_GAME_ID), seconds=window_seconds)
+    rows = await get_recent_notices(int(TARGET_GAME_ID), seconds=window_seconds)
 
     for row in rows:
         notice_id = row["Id"]
