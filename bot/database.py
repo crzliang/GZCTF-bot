@@ -17,19 +17,6 @@ async def get_game_title(game_id: int) -> str:
         await conn.close()
 
 
-async def get_game_challenges(game_id: int):
-    """获取比赛题目列表"""
-    conn = await asyncpg.connect(POSTGRES_DSN)
-    try:
-        rows = await conn.fetch(
-            'SELECT "Title", "Category", "OriginalScore" FROM "GameChallenges" WHERE "GameId" = $1 AND "IsEnabled" = TRUE ORDER BY "Id" DESC',
-            game_id
-        )
-        return rows
-    finally:
-        await conn.close()
-
-
 async def get_game_rankings(game_id: int):
     """获取比赛排行榜"""
     conn = await asyncpg.connect(POSTGRES_DSN)
@@ -71,7 +58,6 @@ async def get_game_rankings(game_id: int):
             ) apt ON apt."TeamId" = t."Id"
             LEFT JOIN "GameChallenges" gc ON gc."Id" = apt."ChallengeId"
             GROUP BY t."Name", t."Id"
-            HAVING SUM(COALESCE(gc."OriginalScore"::integer, 0)) > 0
         ),
         ranked_teams AS (
             SELECT
@@ -152,12 +138,11 @@ async def get_game_rankings_by_stdnum_prefix(game_id: int, stdnum_prefix: str):
             JOIN "Participations" p ON p."TeamId" = t."Id" AND p."GameId" = $1 AND p."Status" = 1
             LEFT JOIN accepted_per_team a ON a."TeamId" = t."Id"
             LEFT JOIN "GameChallenges" gc ON gc."Id" = a."ChallengeId" AND gc."GameId" = $1
+            LEFT JOIN "GameChallenges" gc ON gc."Id" = a."ChallengeId" AND gc."GameId" = $1
             GROUP BY t."Name", t."Id"
-            HAVING SUM(COALESCE(gc."OriginalScore"::integer, 0)) > 0
         ),
         filtered_teams AS (
             -- 按学号前缀过滤队伍（任一成员命中即可）
-            SELECT DISTINCT
                 ts.teamid,
                 ts.teamname,
                 ts.totalscore,

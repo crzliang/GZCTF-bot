@@ -98,9 +98,9 @@ async def _fmt_new(values: str, publish_time: datetime) -> Optional[str]:
             return (
                 f"{_border('上题目啦')}\n"
                 f"比赛: {base['game_title']}\n"
-                f"时间: {base['time_str']}\n"
-                f"类型: {category}\n"
                 f"赛题: {name}\n"
+                f"类型: {category}\n"
+                f"时间: {base['time_str']}\n"
                 f"======================="
             )
         return None
@@ -118,9 +118,9 @@ async def _fmt_hint(values: str, publish_time: datetime) -> Optional[str]:
         return (
             f"{_border('题目提示更新')}\n"
             f"比赛: {base['game_title']}\n"
-            f"时间: {base['time_str']}\n"
-            f"类型: {category}\n"
             f"赛题: {name}\n"
+            f"类型: {category}\n"
+            f"时间: {base['time_str']}\n"
             f"======================="
         )
     except Exception as e:
@@ -134,8 +134,8 @@ async def _fmt_announce(values: str, publish_time: datetime) -> str:
         return (
             f"{_border('赛事公告')}\n"
             f"比赛: {base['game_title']}\n"
-            f"时间: {base['time_str']}\n"
             f"内容: {base['decoded_values']}\n"
+            f"时间: {base['time_str']}\n"
             f"======================="
         )
     except Exception as e:

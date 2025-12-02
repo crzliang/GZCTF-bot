@@ -168,50 +168,6 @@ def format_blood_notification(notice_type: str, values_str: str) -> str:
         return str(decoded_values) if 'decoded_values' in locals() and decoded_values else ""
 
 
-def format_challenges_message(game_title: str, challenges_data: List[Dict[str, Any]]) -> str:
-    """格式化题目列表消息
-    
-    Args:
-        game_title: 比赛标题
-        challenges_data: 题目数据列表
-        
-    Returns:
-        格式化的题目列表消息
-    """
-    from .config import CATEGORY_MAPPING
-    
-    if not challenges_data:
-        return f"--- {game_title} -- 题目列表 ---\n暂无题目"
-    
-    text_lines = [f"--- {game_title} -- 题目列表 ---"]
-    
-    # 按 Category 分组
-    category_groups: Dict[str, List[Dict[str, Any]]] = {}
-    for challenge in challenges_data:
-        category = challenge.get('Category', 'Unknown')
-        if category not in category_groups:
-            category_groups[category] = []
-        category_groups[category].append(challenge)
-    
-    # 按 Category 排序并生成消息
-    for category in sorted(category_groups.keys()):
-        category_name = CATEGORY_MAPPING.get(category, f"未知类型({category})")
-        text_lines.append(f"\n【{category_name}】")
-        
-        # 按分数排序题目
-        sorted_challenges = sorted(
-            category_groups[category], 
-            key=lambda x: x.get('OriginalScore', 0)
-        )
-        
-        for challenge in sorted_challenges:
-            title = challenge.get('Title', '未知题目')
-            score = challenge.get('OriginalScore', 0)
-            text_lines.append(f"  {title} -- {score}分")
-    
-    return "\n".join(text_lines)
-
-
 def format_ranking_message(game_title: str, ranking_data: List[Dict[str, Any]]) -> str:
     """格式化排行榜消息
     
