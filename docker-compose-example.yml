@@ -17,7 +17,7 @@ services:
       - bot
 
   bot:
-    image: ghcr.io/crzliang/gzbot:latest
+    image: ghcr.io/crzliang/gzctf-bot:latest
     restart: always
     environment:
       - "POSTGRES_DSN=postgresql://postgres:xxxxx@ip/host:5432/xxxxx" #数据库连接
