@@ -2,7 +2,8 @@ name: Build and Publish Docker image
 
 on:
   push:
-    branches: [ master ]
+    branches: [ "main", "master" ]
+    tags: [ 'v*' ]
     paths:
       - '**/*.py'
       - 'requirements.txt'
@@ -39,11 +40,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            # 默认分支额外打 latest 标签
-            type=raw,value=latest,enable={{is_default_branch}}
+            # 日期-SHA 组合 (例如: 20231202-7b3f1a2) - 方便回溯
+            type=raw,value={{date 'YYYYMMDD'}}-{{sha}}
+            # 总是打 latest 标签 (只要触发构建)
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v6
