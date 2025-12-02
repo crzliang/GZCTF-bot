@@ -40,10 +40,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            # 日期-SHA 组合 (例如: 20231202-7b3f1a2) - 方便回溯
-            type=raw,value={{date 'YYYYMMDD'}}-{{sha}}
             # 总是打 latest 标签 (只要触发构建)
             type=raw,value=latest
+            # 日期-SHA 组合 (例如: 20231202-7b3f1a2) - 方便回溯
+            type=raw,value={{date 'YYYYMMDD'}}-{{sha}}
 
       - name: Build and push
         uses: docker/build-push-action@v6
