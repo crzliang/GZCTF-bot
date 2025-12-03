@@ -17,6 +17,29 @@ async def get_game_title(game_id: int) -> str:
         await conn.close()
 
 
+async def get_game_info(game_id: int):
+    """获取比赛详细信息"""
+    conn = await asyncpg.connect(POSTGRES_DSN)
+    try:
+        query = """
+        SELECT 
+            "Title",
+            "StartTimeUtc",
+            "EndTimeUtc",
+            "WriteupDeadline"
+        FROM 
+            "Games"
+        WHERE 
+            "Id" = $1;
+        """
+        game_record = await conn.fetchrow(query, game_id)
+        if not game_record:
+            raise ValueError(f"未找到ID为 {game_id} 的比赛")
+        return game_record
+    finally:
+        await conn.close()
+
+
 async def get_game_rankings(game_id: int):
     """获取比赛排行榜"""
     conn = await asyncpg.connect(POSTGRES_DSN)
@@ -90,98 +113,98 @@ async def get_game_rankings(game_id: int):
         await conn.close()
 
 
-async def get_game_rankings_by_stdnum_prefix(game_id: int, stdnum_prefix: str):
-    """获取按学号前缀过滤的比赛排行榜"""
-    conn = await asyncpg.connect(POSTGRES_DSN)
-    try:
-        # 查询指定学号前缀的队伍排行榜
-        query = """
-        WITH first_accept_per_part AS (
-            -- 每个参与(Participation)对每题的最早 Accepted
-            SELECT
-                s."ParticipationId",
-                s."ChallengeId",
-                MIN(s."SubmitTimeUtc") AS first_time
-            FROM "Submissions" s
-            WHERE s."GameId" = $1
-            AND s."Status" = 'Accepted'
-            GROUP BY s."ParticipationId", s."ChallengeId"
-        ),
-        accepted_per_team_raw AS (
-            -- 关联到队伍，仅统计已被接受的参赛资格
-            SELECT
-                p."TeamId",
-                f."ChallengeId",
-                f.first_time
-            FROM first_accept_per_part f
-            JOIN "Participations" p ON p."Id" = f."ParticipationId"
-            WHERE p."GameId" = $1
-            AND p."Status" = 1
-        ),
-        accepted_per_team AS (
-            -- 防御性去重（同队同题合并为一次，取最早时间）
-            SELECT
-                "TeamId",
-                "ChallengeId",
-                MIN(first_time) AS first_time
-            FROM accepted_per_team_raw
-            GROUP BY "TeamId", "ChallengeId"
-        ),
-        team_scores AS (
-            -- 计算总分与最后一次被记分时间（用于同分排序）
-            SELECT
-                t."Name" AS teamname,
-                t."Id"   AS teamid,
-                COALESCE(SUM(gc."OriginalScore"::integer), 0) AS totalscore,
-                MAX(a.first_time) AS lastacceptedsubmission
-            FROM "Teams" t
-            JOIN "Participations" p ON p."TeamId" = t."Id" AND p."GameId" = $1 AND p."Status" = 1
-            LEFT JOIN accepted_per_team a ON a."TeamId" = t."Id"
-            LEFT JOIN "GameChallenges" gc ON gc."Id" = a."ChallengeId" AND gc."GameId" = $1
-            LEFT JOIN "GameChallenges" gc ON gc."Id" = a."ChallengeId" AND gc."GameId" = $1
-            GROUP BY t."Name", t."Id"
-        ),
-        filtered_teams AS (
-            -- 按学号前缀过滤队伍（任一成员命中即可）
-                ts.teamid,
-                ts.teamname,
-                ts.totalscore,
-                ts.lastacceptedsubmission
-            FROM team_scores ts
-            JOIN "Participations" p ON p."TeamId" = ts.teamid AND p."GameId" = $1
-            JOIN "UserParticipations" up ON up."ParticipationId" = p."Id"
-            JOIN "AspNetUsers" u ON u."Id" = up."UserId"
-            WHERE u."StdNumber" LIKE ($2 || '%')
-        ),
-        ranked_teams AS (
-            SELECT
-                teamname,
-                teamid,
-                totalscore,
-                lastacceptedsubmission,
-                ROW_NUMBER() OVER (
-                    ORDER BY totalscore DESC,
-                            lastacceptedsubmission ASC NULLS LAST,
-                            teamname ASC
-                ) AS rank
-            FROM filtered_teams
-        )
-        SELECT
-            rt.rank,
-            rt.teamname,
-            rt.totalscore,
-            STRING_AGG(DISTINCT u."StdNumber", ', ' ORDER BY u."StdNumber") AS studentnumbers
-        FROM ranked_teams rt
-        JOIN "Participations" p ON p."TeamId" = rt.teamid AND p."GameId" = $1
-        JOIN "UserParticipations" up ON up."ParticipationId" = p."Id"
-        JOIN "AspNetUsers" u ON u."Id" = up."UserId"
-        GROUP BY rt.rank, rt.teamname, rt.totalscore, rt.lastacceptedsubmission
-        ORDER BY rt.rank;
-        """
-        rows = await conn.fetch(query, game_id, stdnum_prefix)
-        return rows
-    finally:
-        await conn.close()
+# async def get_game_rankings_by_stdnum_prefix(game_id: int, stdnum_prefix: str):
+#     """获取按学号前缀过滤的比赛排行榜"""
+#     conn = await asyncpg.connect(POSTGRES_DSN)
+#     try:
+#         # 查询指定学号前缀的队伍排行榜
+#         query = """
+#         WITH first_accept_per_part AS (
+#             -- 每个参与(Participation)对每题的最早 Accepted
+#             SELECT
+#                 s."ParticipationId",
+#                 s."ChallengeId",
+#                 MIN(s."SubmitTimeUtc") AS first_time
+#             FROM "Submissions" s
+#             WHERE s."GameId" = $1
+#             AND s."Status" = 'Accepted'
+#             GROUP BY s."ParticipationId", s."ChallengeId"
+#         ),
+#         accepted_per_team_raw AS (
+#             -- 关联到队伍，仅统计已被接受的参赛资格
+#             SELECT
+#                 p."TeamId",
+#                 f."ChallengeId",
+#                 f.first_time
+#             FROM first_accept_per_part f
+#             JOIN "Participations" p ON p."Id" = f."ParticipationId"
+#             WHERE p."GameId" = $1
+#             AND p."Status" = 1
+#         ),
+#         accepted_per_team AS (
+#             -- 防御性去重（同队同题合并为一次，取最早时间）
+#             SELECT
+#                 "TeamId",
+#                 "ChallengeId",
+#                 MIN(first_time) AS first_time
+#             FROM accepted_per_team_raw
+#             GROUP BY "TeamId", "ChallengeId"
+#         ),
+#         team_scores AS (
+#             -- 计算总分与最后一次被记分时间（用于同分排序）
+#             SELECT
+#                 t."Name" AS teamname,
+#                 t."Id"   AS teamid,
+#                 COALESCE(SUM(gc."OriginalScore"::integer), 0) AS totalscore,
+#                 MAX(a.first_time) AS lastacceptedsubmission
+#             FROM "Teams" t
+#             JOIN "Participations" p ON p."TeamId" = t."Id" AND p."GameId" = $1 AND p."Status" = 1
+#             LEFT JOIN accepted_per_team a ON a."TeamId" = t."Id"
+#             LEFT JOIN "GameChallenges" gc ON gc."Id" = a."ChallengeId" AND gc."GameId" = $1
+#             LEFT JOIN "GameChallenges" gc ON gc."Id" = a."ChallengeId" AND gc."GameId" = $1
+#             GROUP BY t."Name", t."Id"
+#         ),
+#         filtered_teams AS (
+#             -- 按学号前缀过滤队伍（任一成员命中即可）
+#                 ts.teamid,
+#                 ts.teamname,
+#                 ts.totalscore,
+#                 ts.lastacceptedsubmission
+#             FROM team_scores ts
+#             JOIN "Participations" p ON p."TeamId" = ts.teamid AND p."GameId" = $1
+#             JOIN "UserParticipations" up ON up."ParticipationId" = p."Id"
+#             JOIN "AspNetUsers" u ON u."Id" = up."UserId"
+#             WHERE u."StdNumber" LIKE ($2 || '%')
+#         ),
+#         ranked_teams AS (
+#             SELECT
+#                 teamname,
+#                 teamid,
+#                 totalscore,
+#                 lastacceptedsubmission,
+#                 ROW_NUMBER() OVER (
+#                     ORDER BY totalscore DESC,
+#                             lastacceptedsubmission ASC NULLS LAST,
+#                             teamname ASC
+#                 ) AS rank
+#             FROM filtered_teams
+#         )
+#         SELECT
+#             rt.rank,
+#             rt.teamname,
+#             rt.totalscore,
+#             STRING_AGG(DISTINCT u."StdNumber", ', ' ORDER BY u."StdNumber") AS studentnumbers
+#         FROM ranked_teams rt
+#         JOIN "Participations" p ON p."TeamId" = rt.teamid AND p."GameId" = $1
+#         JOIN "UserParticipations" up ON up."ParticipationId" = p."Id"
+#         JOIN "AspNetUsers" u ON u."Id" = up."UserId"
+#         GROUP BY rt.rank, rt.teamname, rt.totalscore, rt.lastacceptedsubmission
+#         ORDER BY rt.rank;
+#         """
+#         rows = await conn.fetch(query, game_id, stdnum_prefix)
+#         return rows
+#     finally:
+#         await conn.close()
 
 
 async def get_recent_notices(game_id: int, seconds: int = 10):

@@ -168,6 +168,66 @@ def format_blood_notification(notice_type: str, values_str: str) -> str:
         return str(decoded_values) if 'decoded_values' in locals() and decoded_values else ""
 
 
+def format_game_info_message(game_info: Dict[str, Any]) -> str:
+    """格式化比赛信息消息
+    
+    Args:
+        game_info: 比赛信息数据
+        
+    Returns:
+        格式化的比赛信息消息
+    """
+    from datetime import datetime, timezone, timedelta
+    
+    title = game_info.get('Title', '未知比赛')
+    start_time = game_info.get('StartTimeUtc')
+    end_time = game_info.get('EndTimeUtc')
+    writeup_deadline = game_info.get('WriteupDeadline')
+    
+    # 转换为北京时间 (UTC+8)
+    beijing_tz = timezone(timedelta(hours=8))
+    
+    def format_time(utc_time) -> str:
+        if utc_time is None:
+            return "未设置"
+        if isinstance(utc_time, datetime):
+            # 如果是 naive datetime，假设为 UTC
+            if utc_time.tzinfo is None:
+                utc_time = utc_time.replace(tzinfo=timezone.utc)
+            beijing_time = utc_time.astimezone(beijing_tz)
+            return beijing_time.strftime("%Y-%m-%d %H:%M:%S")
+        return str(utc_time)
+    
+    # 计算比赛状态
+    now = datetime.now(timezone.utc)
+    status = "未知"
+    if start_time and end_time:
+        if isinstance(start_time, datetime) and isinstance(end_time, datetime):
+            # 确保时区信息
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+            
+            if now < start_time:
+                status = "未开始"
+            elif now > end_time:
+                status = "已结束"
+            else:
+                status = "进行中"
+    
+    text_lines = [
+        f"{title}",
+        "=" * 30,
+        f"状态: {status}",
+        f"开始时间: {format_time(start_time)}",
+        f"结束时间: {format_time(end_time)}",
+        f"WP截止时间: {format_time(writeup_deadline)}"
+    ]
+    
+    return "\n".join(text_lines)
+
+
 def format_ranking_message(game_title: str, ranking_data: List[Dict[str, Any]]) -> str:
     """格式化排行榜消息
     
