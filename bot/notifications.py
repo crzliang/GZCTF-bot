@@ -37,7 +37,7 @@ class NotificationTypes(str, Enum):
 
 @dataclass
 class NotificationConfig:
-    CHECK_INTERVAL_SECONDS: int = 10
+    CHECK_INTERVAL_SECONDS: int = 5
     MAX_BROADCASTED_NOTICES: int = 1000
     CLEANUP_THRESHOLD: int = 500
     TIME_FORMAT: str = "%Y/%m/%d %H:%M:%S"
@@ -60,6 +60,8 @@ def set_auto_broadcast_enabled(enabled: bool) -> None:
     if enabled:
         # 以系统当前时间作为水位线（UTC）
         last_checked_time = datetime.now(timezone.utc)
+        logger.info("自动播报已启用，设置时间水位线: %s (北京时间: %s)", 
+                    last_checked_time.isoformat(), _fmt_bj(last_checked_time))
 
 
 # 时间/格式化
@@ -215,11 +217,16 @@ async def check_and_broadcast_notices() -> None:
     now = datetime.now(timezone.utc)
     if last_checked_time is None:
         last_checked_time = now
+        logger.info("初始化时间水位线: %s (北京时间: %s)", now.isoformat(), _fmt_bj(now))
         return
 
     window_seconds = int((now - last_checked_time).total_seconds())
     if window_seconds <= 0:
         window_seconds = NotificationConfig.CHECK_INTERVAL_SECONDS
+    
+    # 输出当前水位线信息
+    logger.info("当前时间水位线: %s (北京时间: %s), 查询窗口: %d秒", 
+                last_checked_time.isoformat(), _fmt_bj(last_checked_time), window_seconds)
 
     # 暂时禁用实际查询，避免回放
     rows: List[Dict] = []
