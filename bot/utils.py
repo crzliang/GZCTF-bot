@@ -1,6 +1,6 @@
 """
 工具函数模块
-提供Unicode解码、通知格式化、消息格式化、命令处理等通用功能
+提供Unicode解码、通知格式化、命令处理等通用功能
 """
 import json
 import codecs
@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 
 def decode_unicode_values(values_str: Optional[str]) -> str:
     """解码 Unicode 编码的 values 字符串
-    
+
     Args:
         values_str: 可能包含Unicode编码的字符串
-        
+
     Returns:
         解码后的字符串，解码失败时返回原字符串
     """
     if not values_str:
         return ""
-    
+
     try:
         # 尝试解析 JSON 格式的 Unicode 编码
         if values_str.startswith('"') and values_str.endswith('"'):
@@ -43,17 +43,17 @@ def decode_unicode_values(values_str: Optional[str]) -> str:
 
 def extract_challenge_name_from_values(values_str: str) -> str:
     """从新题目通知的values中提取题目名称
-    
+
     Args:
         values_str: 题目通知的值，可能是 ["题目名"] 格式
-        
+
     Returns:
         提取的题目名称
     """
     try:
         # 先进行Unicode解码
         decoded = decode_unicode_values(values_str)
-        
+
         # 如果解码后是JSON数组格式，提取第一个元素
         if decoded.startswith('[') and decoded.endswith(']'):
             try:
@@ -62,10 +62,10 @@ def extract_challenge_name_from_values(values_str: str) -> str:
                     return str(parsed_list[0])
             except json.JSONDecodeError:
                 pass
-        
+
         # 如果不是数组格式，直接返回解码结果
         return decoded
-        
+
     except Exception as e:
         logger.warning(f"Failed to extract challenge name from '{values_str}': {e}")
         return values_str or "未知题目"
@@ -73,10 +73,10 @@ def extract_challenge_name_from_values(values_str: str) -> str:
 
 def _parse_blood_notification_values(decoded_values: Any) -> Optional[tuple[str, str]]:
     """解析前三通知的值
-    
+
     Args:
         decoded_values: 解码后的值
-        
+
     Returns:
         元组(队伍名, 题目名)，解析失败返回None
     """
@@ -89,11 +89,11 @@ def _parse_blood_notification_values(decoded_values: Any) -> Optional[tuple[str,
                 values_list = decoded_values
         else:
             values_list = decoded_values
-        
+
         # 如果是列表格式 ["队伍名", "题目名"]
         if isinstance(values_list, list) and len(values_list) >= 2:
             return values_list[0], values_list[1]
-        
+
         return None
     except Exception as e:
         logger.error(f"Failed to parse blood notification values: {e}")
@@ -102,10 +102,10 @@ def _parse_blood_notification_values(decoded_values: Any) -> Optional[tuple[str,
 
 def _get_blood_type_info(notice_type: str) -> Optional[tuple[str, str]]:
     """获取前三通知类型信息
-    
+
     Args:
         notice_type: 通知类型字符串
-        
+
     Returns:
         元组(前三类型, 表情)，未识别返回None
     """
@@ -114,166 +114,73 @@ def _get_blood_type_info(notice_type: str) -> Optional[tuple[str, str]]:
         "二血": ("二血", "🥈"),
         "三血": ("三血", "🥉")
     }
-    
+
     for blood_key, (blood_type, emoji) in blood_mapping.items():
         if blood_key in notice_type:
             return blood_type, emoji
-    
+
     return None
 
 
 def format_blood_notification(notice_type: str, values_str: str) -> str:
     """格式化前三通知的显示内容
-    
+
     Args:
         notice_type: 通知类型
         values_str: 通知值字符串
-        
+
     Returns:
         格式化后的通知内容
     """
     try:
         decoded_values = decode_unicode_values(values_str)
-        
+
         # 检查是否为前三血通知
         if any(blood in notice_type for blood in ['一血', '二血', '三血']):
             blood_info = _parse_blood_notification_values(decoded_values)
-            
+
             if blood_info:
                 team_name, challenge_name = blood_info
                 blood_type_info = _get_blood_type_info(notice_type)
-                
+
                 if blood_type_info:
                     blood_type, _ = blood_type_info
                     return f"恭喜 {team_name} 获得 [{challenge_name}] {blood_type}"
-            
+
             # 如果解析失败，返回原始解码值
             return str(decoded_values) if decoded_values else ""
-        
+
         # 检查其他通知类型
         elif '新题目开放' in notice_type:
             challenge_name = str(decoded_values) if decoded_values else "未知题目"
             return f"题目 [{challenge_name}] 已开放"
-        
+
         elif '提示更新' in notice_type:
             challenge_name = str(decoded_values) if decoded_values else "未知题目"
             return f"题目 [{challenge_name}] 更新了提示"
-        
+
         else:
             # 其他通知，直接返回解码后的内容
             return str(decoded_values) if decoded_values else ""
-            
+
     except Exception as e:
         logger.error(f"Failed to format notification: {e}")
         return str(decoded_values) if 'decoded_values' in locals() and decoded_values else ""
-
-
-def format_game_info_message(game_info: Dict[str, Any]) -> str:
-    """格式化比赛信息消息
-    
-    Args:
-        game_info: 比赛信息数据
-        
-    Returns:
-        格式化的比赛信息消息
-    """
-    from datetime import datetime, timezone, timedelta
-    
-    title = game_info.get('Title', '未知比赛')
-    start_time = game_info.get('StartTimeUtc')
-    end_time = game_info.get('EndTimeUtc')
-    writeup_deadline = game_info.get('WriteupDeadline')
-    
-    # 转换为北京时间 (UTC+8)
-    beijing_tz = timezone(timedelta(hours=8))
-    
-    def format_time(utc_time) -> str:
-        if utc_time is None:
-            return "未设置"
-        if isinstance(utc_time, datetime):
-            # 如果是 naive datetime，假设为 UTC
-            if utc_time.tzinfo is None:
-                utc_time = utc_time.replace(tzinfo=timezone.utc)
-            beijing_time = utc_time.astimezone(beijing_tz)
-            return beijing_time.strftime("%Y-%m-%d %H:%M:%S")
-        return str(utc_time)
-    
-    # 计算比赛状态
-    now = datetime.now(timezone.utc)
-    status = "未知"
-    if start_time and end_time:
-        if isinstance(start_time, datetime) and isinstance(end_time, datetime):
-            # 确保时区信息
-            if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
-            if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=timezone.utc)
-            
-            if now < start_time:
-                status = "未开始"
-            elif now > end_time:
-                status = "已结束"
-            else:
-                status = "进行中"
-    
-    text_lines = [
-        f"{title}",
-        "=" * 30,
-        f"状态: {status}",
-        f"开始时间: {format_time(start_time)}",
-        f"结束时间: {format_time(end_time)}",
-        f"WP截止时间: {format_time(writeup_deadline)}"
-    ]
-    
-    return "\n".join(text_lines)
-
-
-def format_ranking_message(game_title: str, ranking_data: List[Dict[str, Any]]) -> str:
-    """格式化排行榜消息
-    
-    Args:
-        game_title: 比赛标题
-        ranking_data: 排行榜数据列表
-        
-    Returns:
-        格式化的排行榜消息
-    """
-    if not ranking_data:
-        return f"{game_title} - 排行榜\n" + "=" * 30 + "\n暂无排名数据"
-    
-    text_lines = [f"{game_title} - 排行榜"]
-    text_lines.append("=" * 30)
-    
-    # 排名表情映射
-    rank_emojis = {1: "🥇", 2: "🥈", 3: "🥉"}
-    
-    for row in ranking_data:
-        rank_num = row.get('rank', 0)
-        team_name = row.get('teamname', '未知队伍')
-        score = row.get('totalscore', 0)
-        
-        # 添加排名表情
-        emoji = rank_emojis.get(rank_num, f" {rank_num} ")
-        
-        # 只显示队伍名和分数，不显示学号
-        text_lines.append(f"{emoji} {team_name} -- {score}分")
-    
-    return "\n".join(text_lines)
 
 
 # ==================== 命令处理工具函数 ====================
 
 def check_group_permission(event: Event) -> bool:
     """检查群组权限
-    
+
     Args:
         event: 事件对象
-        
+
     Returns:
         是否有权限
     """
     from .config import ALLOWED_GROUP_IDS
-    
+
     if ALLOWED_GROUP_IDS:
         if not isinstance(event, GroupMessageEvent) or getattr(event, "group_id", None) not in ALLOWED_GROUP_IDS:
             return False
@@ -282,15 +189,15 @@ def check_group_permission(event: Event) -> bool:
 
 def check_admin_permission(event: Event) -> bool:
     """检查管理员权限
-    
+
     Args:
         event: 事件对象
-        
+
     Returns:
         是否有管理员权限
     """
     from .config import ADMIN_QQ_IDS
-    
+
     if ADMIN_QQ_IDS:
         user_id = getattr(event, "user_id", None)
         if user_id is None or user_id not in ADMIN_QQ_IDS:
@@ -300,36 +207,33 @@ def check_admin_permission(event: Event) -> bool:
 
 async def validate_command_prerequisites(command_name: str, event: Event) -> Optional[str]:
     """验证命令执行的先决条件
-    
+
     Args:
         command_name: 命令名称
         event: 事件对象
-        
+
     Returns:
         如果有错误返回错误消息，否则返回None
     """
     from .config import POSTGRES_DSN, TARGET_GAME_ID
-    
-    # debug logs removed
-    
+
     # 权限检查
     if not check_group_permission(event):
         return "PERMISSION_DENIED"  # 特殊标记，表示权限被拒绝
-    
+
     # 配置检查
     if not POSTGRES_DSN:
         return "未配置 POSTGRES_DSN。"
-    
+
     if not TARGET_GAME_ID:
         return "未在 .env 文件中设置 TARGET_GAME_ID。"
-    
-    # debug logs removed
+
     return None
 
 
 async def send_response(bot: Bot, event: Event, message: str, command_name: str) -> None:
     """发送响应消息
-    
+
     Args:
         bot: 机器人实例
         event: 事件对象
@@ -343,21 +247,9 @@ async def send_response(bot: Bot, event: Event, message: str, command_name: str)
         raise
 
 
-def log_command_result(command_name: str, game_id: int, result_count: int, data_type: str = "items") -> None:
-    """记录命令执行结果
-    
-    Args:
-        command_name: 命令名称
-        game_id: 赛事ID
-        result_count: 结果数量
-        data_type: 数据类型描述
-    """
-    # debug logs removed
-
-
 def log_database_error(command_name: str, error: Exception) -> None:
     """记录数据库错误
-    
+
     Args:
         command_name: 命令名称
         error: 异常对象

@@ -7,7 +7,7 @@ import os
 POSTGRES_DSN = os.getenv("POSTGRES_DSN")
 
 # 允许触发命令的群聊 ID，逗号分隔；为空表示不限制
-ALLOWED_GROUP_IDS_RAW = os.getenv("ALLOWED_GROUP_IDS", "")
+ALLOWED_GROUP_IDS_RAW = os.getenv("ALLOWED_GROUP_IDS")
 ALLOWED_GROUP_IDS = set()
 if ALLOWED_GROUP_IDS_RAW:
     try:
@@ -18,8 +18,11 @@ if ALLOWED_GROUP_IDS_RAW:
 # 从 .env 文件读取要监听的比赛 ID
 TARGET_GAME_ID = os.getenv("TARGET_GAME_ID")
 
+# GZCTF API 基础 URL
+GZCTF_BASE_URL = os.getenv("GZCTF_BASE_URL")
+
 # 管理员 QQ 号，逗号分隔；为空表示不限制
-ADMIN_QQ_IDS_RAW = os.getenv("ADMIN_QQ_IDS", "")
+ADMIN_QQ_IDS_RAW = os.getenv("ADMIN_QQ_IDS")
 ADMIN_QQ_IDS = set()
 if ADMIN_QQ_IDS_RAW:
     try:
